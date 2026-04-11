@@ -1,0 +1,7 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# Gold Rush - Cron Jobs
+# Run precious metals price fetch every hour.
+0 * * * * root cd /var/www/backend && php bin/console app:metals:current-prices --no-interaction >> /var/log/cron.log 2>&1
