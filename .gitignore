@@ -1,1 +1,51 @@
-/.idea
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Secrets
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker/runtime
+docker-compose.override.yml
+
+# Symfony backend
+backend/vendor/
+backend/var/
+backend/.phpunit.result.cache
+backend/.env
+backend/.env.local
+backend/.env.*.local
+
+# PHPUnit / coverage
+backend/.coverage
+backend/coverage/
+coverage/
+
+# Frontend (React + Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.eslintcache
+frontend/coverage/
+
+# Build artifacts
+build/
+tmp/
