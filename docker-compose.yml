@@ -35,11 +35,15 @@ services:
     container_name: dochelper_backend
     restart: unless-stopped
     working_dir: /var/www/backend
+    command: sh -c "if [ ! -d vendor ] || [ -z \"$$(ls -A vendor 2>/dev/null)\" ]; then composer install --no-interaction --prefer-dist; fi; php-fpm"
     volumes:
       - ./backend:/var/www/backend
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_SECRET: ${APP_SECRET:-change_me}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-/var/www/backend/config/jwt/private.pem}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-/var/www/backend/config/jwt/public.pem}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-change_me}
       DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}?serverVersion=8.0
     depends_on:
       db:
@@ -94,11 +98,16 @@ services:
       dockerfile: docker/cron/Dockerfile
     container_name: dochelper_cron
     restart: unless-stopped
+    working_dir: /var/www/backend
+    command: sh -c "if [ ! -d vendor ] || [ -z \"$$(ls -A vendor 2>/dev/null)\" ]; then composer install --no-interaction --prefer-dist; fi; cron -f"
     volumes:
       - ./backend:/var/www/backend
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_SECRET: ${APP_SECRET:-change_me}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-/var/www/backend/config/jwt/private.pem}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-/var/www/backend/config/jwt/public.pem}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-change_me}
       DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}?serverVersion=8.0
     depends_on:
       db:

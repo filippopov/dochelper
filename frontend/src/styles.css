@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", sans-serif;
 }
 
 * {
@@ -10,7 +10,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, #d7f2ff 0%, #f5fff6 45%, #fff4df 100%);
+  background: linear-gradient(140deg, #f3fbff 0%, #e8f5ef 46%, #fff7e8 100%);
   color: #11313d;
 }
 
@@ -40,11 +40,117 @@ body {
 }
 
 h1 {
-  margin: 0;
+  margin: 0 0 1rem;
   font-size: clamp(1.75rem, 3vw, 2.4rem);
 }
 
-p {
+.tab-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  border: 1px solid #9cb7c0;
+  background: #fff;
+  color: #11313d;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+.tab-active {
+  background: #0e6d86;
+  color: #fff;
+  border-color: #0e6d86;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.helper-text {
+  margin: -0.15rem 0 0.25rem;
+  font-size: 0.82rem;
+  color: #4c6770;
+}
+
+label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input {
+  border: 1px solid #b5c9d0;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+}
+
+.primary-button,
+.secondary-button {
+  border: none;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: #0e6d86;
+  color: #fff;
+}
+
+.primary-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.secondary-button {
+  background: #d9e8ee;
+  color: #11313d;
+}
+
+.auth-box {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.json-preview {
+  margin: 0;
+  background: #0d1b22;
+  color: #d9f6ff;
+  border-radius: 12px;
+  padding: 0.85rem;
+  overflow: auto;
+}
+
+.status-ok,
+.status-error {
   margin-top: 1rem;
-  line-height: 1.55;
+  font-weight: 700;
+}
+
+.status-ok {
+  color: #056b37;
+}
+
+.status-error {
+  color: #b12f2a;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1.3rem;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
 }

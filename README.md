@@ -28,8 +28,8 @@ Allow patients to book appointments with doctors through a web interface, with b
 
 ## Repository Structure
 
-- backend/: Symfony backend baseline (bootstrap stage)
-- frontend/: React + Vite frontend baseline
+- backend/: Symfony 7.4 API application
+- frontend/: React + Vite client
 - docker/: container definitions and config
 - docker-compose.yml: local multi-container orchestration
 
@@ -67,6 +67,9 @@ Template file: .env.example
 Typical local values:
 - APP_ENV=dev
 - APP_SECRET=change_me
+- JWT_SECRET_KEY=/var/www/backend/config/jwt/private.pem
+- JWT_PUBLIC_KEY=/var/www/backend/config/jwt/public.pem
+- JWT_PASSPHRASE=change_me
 - MYSQL_ROOT_PASSWORD=root
 - MYSQL_DATABASE=dochelper
 - MYSQL_USER=dochelper
@@ -106,6 +109,43 @@ docker compose ps
 - API via nginx: http://localhost:8080/api/
 - MySQL host port: 3307
 
+### Authentication Endpoints
+
+- POST /api/register
+	- Request JSON: {"email":"user@example.com","password":"secret123","roleType":"patient"}
+	- Note: public registration is patient-only; doctor role cannot be self-registered
+	- Success: 201 Created with user payload
+- POST /api/login
+	- Request JSON: {"email":"user@example.com","password":"secret123"}
+	- Success: 200 OK with access token + refresh token + user payload
+- POST /api/token/refresh
+	- Request JSON: {"refreshToken":"<token>"}
+	- Success: 200 OK with rotated refresh token and new access token
+- POST /api/logout
+	- Request JSON: {"refreshToken":"<token>"}
+	- Header: Authorization: Bearer <access-token>
+	- Success: 200 OK and refresh token revoked
+- GET /api/me
+	- Header: Authorization: Bearer <token>
+	- Success: 200 OK with current authenticated user
+
+### Appointment Endpoints
+
+- POST /api/appointments
+	- Role: patient
+	- Request JSON: {"doctorId":2,"scheduledAt":"2026-04-13T10:00:00+00:00","durationMinutes":30,"reason":"Consultation"}
+- GET /api/appointments
+	- Role: patient or doctor
+	- Returns appointments scoped to authenticated role
+- GET /api/appointments/{id}
+	- Role: patient or doctor
+	- Allowed only for participating patient/doctor
+- PATCH /api/appointments/{id}/status
+	- Role: doctor (assigned to appointment)
+	- Request JSON: {"status":"confirmed"} or {"status":"completed"}
+- POST /api/appointments/{id}/cancel
+	- Role: patient (owner of appointment)
+
 ## Useful Commands
 
 View logs:
@@ -134,11 +174,11 @@ docker compose build frontend
 
 ## Current Baseline Status
 
-This repo is currently in bootstrap phase.
-
-- Frontend baseline app is present and served through nginx.
-- Backend currently exposes a bootstrap response on /api/.
-- Full Symfony skeleton and domain modules will be added step by step.
+- Full Symfony app bootstrap is in place.
+- JWT access + rotating refresh-token flow is implemented.
+- Role model supports patient/doctor with patient-only public registration.
+- Protected appointment endpoints are implemented with role and ownership guards.
+- Frontend includes login/register and automatic access-token refresh on 401.
 
 ## Troubleshooting
 
@@ -166,4 +206,4 @@ docker compose logs -f frontend nginx
 
 ## Next Implementation Step
 
-Initialize full Symfony project structure in backend and add the first appointment-oriented API endpoints.
+Add admin-managed doctor creation flow and optional appointment conflict detection.

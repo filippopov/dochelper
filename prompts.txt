@@ -1,0 +1,13 @@
+I want to add a Symfony project and a React project (Vite). Create an API for login and registration using JWT tokens and give me the endpoints
+
+
+Next steps (optional)
+Add refresh token flow.
+Add role-based registration (patient/doctor) and role guards.
+Add appointment entities and protected appointment endpoints.
+
+
+
+Add admin-only endpoint to create doctor accounts.
+Add appointment conflict checks (doctor availability overlap).
+Expand tests from access-control checks to full happy-path integration scenarios.
