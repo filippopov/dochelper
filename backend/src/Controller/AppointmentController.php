@@ -80,11 +80,21 @@ class AppointmentController extends AbstractController
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $durationMinutes = (int) ($payload['durationMinutes'] ?? 30);
+        $scheduledEnd = $scheduledAt->modify('+' . $durationMinutes . ' minutes');
+
+        if ($appointmentRepository->hasDoctorConflict($doctor, $scheduledAt, $scheduledEnd)) {
+            return $this->json([
+                'error' => 'Selected timeslot is no longer available.',
+                'code' => 'TIMESLOT_UNAVAILABLE',
+            ], JsonResponse::HTTP_CONFLICT);
+        }
+
         $appointment = (new Appointment())
             ->setPatient($patient)
             ->setDoctor($doctor)
             ->setScheduledAt($scheduledAt)
-            ->setDurationMinutes((int) ($payload['durationMinutes'] ?? 30))
+            ->setDurationMinutes($durationMinutes)
             ->setReason(isset($payload['reason']) ? (string) $payload['reason'] : null);
 
         $appointmentRepository->save($appointment);

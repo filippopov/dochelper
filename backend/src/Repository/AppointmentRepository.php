@@ -44,4 +44,52 @@ class AppointmentRepository extends ServiceEntityRepository
 
         return $qb->setParameter('user', $user)->getQuery()->getResult();
     }
+
+    /**
+     * @return list<Appointment>
+     */
+    public function findForDoctorBetween(User $doctor, \DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.doctor = :doctor')
+            ->andWhere('a.scheduledAt >= :start')
+            ->andWhere('a.scheduledAt < :end')
+            ->andWhere('a.status != :cancelled')
+            ->setParameter('doctor', $doctor)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->setParameter('cancelled', Appointment::STATUS_CANCELLED)
+            ->orderBy('a.scheduledAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function hasDoctorConflict(User $doctor, \DateTimeImmutable $start, \DateTimeImmutable $end): bool
+    {
+        $windowStart = $start->modify('-120 minutes');
+
+        $appointments = $this->createQueryBuilder('a')
+            ->andWhere('a.doctor = :doctor')
+            ->andWhere('a.scheduledAt < :end')
+            ->andWhere('a.scheduledAt >= :windowStart')
+            ->andWhere('a.status != :cancelled')
+            ->setParameter('doctor', $doctor)
+            ->setParameter('end', $end)
+            ->setParameter('windowStart', $windowStart)
+            ->setParameter('cancelled', Appointment::STATUS_CANCELLED)
+            ->orderBy('a.scheduledAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        foreach ($appointments as $appointment) {
+            $appointmentStart = $appointment->getScheduledAt();
+            $appointmentEnd = $appointmentStart->modify('+' . $appointment->getDurationMinutes() . ' minutes');
+
+            if ($appointmentStart < $end && $appointmentEnd > $start) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

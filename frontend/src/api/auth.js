@@ -73,6 +73,31 @@ export function getProfile() {
   return request('/me', { token: getStoredAccessToken() });
 }
 
+export function getDoctors() {
+  return request('/doctors', { token: getStoredAccessToken() });
+}
+
+export function getDoctorCalendar(doctorId, { startDate, endDate }) {
+  const query = new URLSearchParams({ startDate, endDate });
+
+  return request(`/doctors/${doctorId}/calendar?${query.toString()}`, {
+    token: getStoredAccessToken(),
+  });
+}
+
+export function createAppointment({ doctorId, scheduledAt, durationMinutes = 30, reason = 'Consultation' }) {
+  return request('/appointments', {
+    method: 'POST',
+    token: getStoredAccessToken(),
+    body: {
+      doctorId: Number(doctorId),
+      scheduledAt,
+      durationMinutes,
+      reason,
+    },
+  });
+}
+
 export async function logoutUser() {
   const refreshToken = getStoredRefreshToken();
 

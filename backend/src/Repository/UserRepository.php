@@ -37,4 +37,17 @@ class UserRepository extends ServiceEntityRepository
 
         return $user;
     }
+
+    /**
+     * @return list<User>
+     */
+    public function findAllDoctors(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.roleType = :roleType')
+            ->setParameter('roleType', User::ROLE_TYPE_DOCTOR)
+            ->orderBy('u.email', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }
