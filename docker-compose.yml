@@ -61,7 +61,7 @@ services:
     container_name: dochelper_frontend
     restart: unless-stopped
     working_dir: /app
-    command: sh -c "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ]; then npm install --no-audit --no-fund --legacy-peer-deps; fi; npm run dev"
+    command: sh -c "npm install --no-audit --no-fund --legacy-peer-deps; npm run dev"
     volumes:
       - ./frontend:/app
       - /app/node_modules

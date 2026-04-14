@@ -39,7 +39,7 @@ class AuthController extends AbstractController
         $violations = $validator->validate($payload, new Assert\Collection([
             'email' => [new Assert\Required([new Assert\Email(), new Assert\NotBlank()])],
             'password' => [new Assert\Required([new Assert\Length(min: 8), new Assert\NotBlank()])],
-            'roleType' => [new Assert\Optional([new Assert\Choice([User::ROLE_TYPE_PATIENT, User::ROLE_TYPE_DOCTOR])])],
+            'roleType' => [new Assert\Optional([new Assert\Choice([User::ROLE_TYPE_PATIENT, User::ROLE_TYPE_DOCTOR, User::ROLE_TYPE_ADMIN])])],
         ]));
 
         if (count($violations) > 0) {
@@ -58,6 +58,13 @@ class AuthController extends AbstractController
             return $this->json([
                 'error' => 'Public registration is limited to patient accounts.',
                 'code' => 'DOCTOR_REGISTRATION_NOT_ALLOWED',
+            ], JsonResponse::HTTP_FORBIDDEN);
+        }
+
+        if ($roleType === User::ROLE_TYPE_ADMIN) {
+            return $this->json([
+                'error' => 'Public registration is limited to patient accounts.',
+                'code' => 'ADMIN_REGISTRATION_NOT_ALLOWED',
             ], JsonResponse::HTTP_FORBIDDEN);
         }
 

@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 
-function Navbar({ isAuthenticated, profileEmail, activeTab, onSelectTab, onLogout }) {
+function Navbar({ isAuthenticated, profileEmail, canAccessAdmin, activeTab, onSelectAuthTab, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   function closeMenu() {
     setMenuOpen(false);
   }
 
-  function handleTabSelect(tab) {
-    onSelectTab(tab);
+  function handleAuthTabSelect(tab) {
+    onSelectAuthTab(tab);
     closeMenu();
   }
 
@@ -20,10 +21,10 @@ function Navbar({ isAuthenticated, profileEmail, activeTab, onSelectTab, onLogou
   return (
     <header className="site-nav-wrap">
       <nav className="site-nav" aria-label="Primary">
-        <a className="brand" href="#top" onClick={closeMenu}>
+        <NavLink className="brand" to={isAuthenticated ? '/app' : '/auth'} onClick={closeMenu}>
           <span className="brand-dot" aria-hidden="true" />
           Dochelper
-        </a>
+        </NavLink>
 
         <button
           type="button"
@@ -39,29 +40,44 @@ function Navbar({ isAuthenticated, profileEmail, activeTab, onSelectTab, onLogou
         </button>
 
         <div id="primary-menu" className={menuOpen ? 'nav-menu nav-menu-open' : 'nav-menu'}>
-          <a className="nav-link" href="#top" onClick={closeMenu}>
-            Home
-          </a>
+          {isAuthenticated ? (
+            <NavLink
+              to="/app"
+              className={({ isActive }) => (isActive ? 'nav-pill nav-pill-active' : 'nav-pill')}
+              onClick={closeMenu}
+            >
+              App
+            </NavLink>
+          ) : null}
 
           {!isAuthenticated ? (
             <div className="nav-auth">
               <button
                 type="button"
                 className={activeTab === 'login' ? 'nav-pill nav-pill-active' : 'nav-pill'}
-                onClick={() => handleTabSelect('login')}
+                onClick={() => handleAuthTabSelect('login')}
               >
                 Login
               </button>
               <button
                 type="button"
                 className={activeTab === 'register' ? 'nav-pill nav-pill-active' : 'nav-pill'}
-                onClick={() => handleTabSelect('register')}
+                onClick={() => handleAuthTabSelect('register')}
               >
                 Register
               </button>
             </div>
           ) : (
             <div className="nav-auth nav-auth-user">
+              {canAccessAdmin ? (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) => (isActive ? 'nav-pill nav-pill-active' : 'nav-pill')}
+                  onClick={closeMenu}
+                >
+                  Admin
+                </NavLink>
+              ) : null}
               <span className="user-chip" title={profileEmail || 'Authenticated user'}>
                 {profileEmail || 'Signed in'}
               </span>

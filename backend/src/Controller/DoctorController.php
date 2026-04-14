@@ -13,18 +13,27 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationCredentialsNotFoundException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/doctors')]
-#[IsGranted('ROLE_PATIENT')]
 class DoctorController extends AbstractController
 {
     private const SLOT_MINUTES = 30;
 
     #[Route('', name: 'api_doctors_list', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
     public function list(UserRepository $userRepository): JsonResponse
     {
+        $viewer = $this->requireUser();
+        if (!$viewer->isPatient() && !$viewer->isAdmin()) {
+            return $this->json([
+                'error' => 'You are not allowed to list doctors.',
+                'code' => 'DOCTOR_LIST_FORBIDDEN',
+            ], JsonResponse::HTTP_FORBIDDEN);
+        }
+
         $doctors = $userRepository->findAllDoctors();
 
         return $this->json([
@@ -39,14 +48,16 @@ class DoctorController extends AbstractController
     }
 
     #[Route('/{id}/calendar', name: 'api_doctors_calendar', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
     public function calendar(
         int $id,
         Request $request,
         UserRepository $userRepository,
         DoctorAvailabilityRepository $availabilityRepository,
-        AppointmentRepository $appointmentRepository
+        AppointmentRepository $appointmentRepository,
+        AuthorizationCheckerInterface $authorizationChecker
     ): JsonResponse {
-        $this->requireUser();
+        $viewer = $this->requireUser();
 
         $doctor = $userRepository->findDoctorById($id);
         if (!$doctor instanceof User) {
@@ -54,6 +65,20 @@ class DoctorController extends AbstractController
                 'error' => 'Doctor not found.',
                 'code' => 'DOCTOR_NOT_FOUND',
             ], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        if ($viewer->isDoctor() && $viewer->getId() !== $doctor->getId()) {
+            return $this->json([
+                'error' => 'Doctors can only view their own availability.',
+                'code' => 'DOCTOR_CALENDAR_FORBIDDEN',
+            ], JsonResponse::HTTP_FORBIDDEN);
+        }
+
+        if (!$viewer->isDoctor() && !$authorizationChecker->isGranted('ROLE_ADMIN') && !$authorizationChecker->isGranted('ROLE_PATIENT')) {
+            return $this->json([
+                'error' => 'You are not allowed to view doctor availability.',
+                'code' => 'DOCTOR_CALENDAR_FORBIDDEN',
+            ], JsonResponse::HTTP_FORBIDDEN);
         }
 
         $range = $this->resolveDateRange($request);

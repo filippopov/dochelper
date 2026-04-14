@@ -17,6 +17,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     public const ROLE_TYPE_PATIENT = 'patient';
     public const ROLE_TYPE_DOCTOR = 'doctor';
+    public const ROLE_TYPE_ADMIN = 'admin';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -107,14 +108,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $normalized = mb_strtolower($roleType);
 
-        if (!in_array($normalized, [self::ROLE_TYPE_PATIENT, self::ROLE_TYPE_DOCTOR], true)) {
+        if (!in_array($normalized, [self::ROLE_TYPE_PATIENT, self::ROLE_TYPE_DOCTOR, self::ROLE_TYPE_ADMIN], true)) {
             throw new \InvalidArgumentException('Unsupported role type.');
         }
 
         $this->roleType = $normalized;
-        $this->roles = $normalized === self::ROLE_TYPE_DOCTOR
-            ? ['ROLE_USER', 'ROLE_DOCTOR']
-            : ['ROLE_USER', 'ROLE_PATIENT'];
+        $this->roles = match ($normalized) {
+            self::ROLE_TYPE_DOCTOR => ['ROLE_USER', 'ROLE_DOCTOR'],
+            self::ROLE_TYPE_ADMIN => ['ROLE_USER', 'ROLE_ADMIN'],
+            default => ['ROLE_USER', 'ROLE_PATIENT'],
+        };
 
         return $this;
     }
@@ -127,6 +130,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isPatient(): bool
     {
         return $this->roleType === self::ROLE_TYPE_PATIENT;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->roleType === self::ROLE_TYPE_ADMIN;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

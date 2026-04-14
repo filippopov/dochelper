@@ -130,6 +130,10 @@ body {
   padding: 0.44rem 0.9rem;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   transition: all 180ms ease;
 }
 
@@ -299,6 +303,30 @@ button:focus-visible,
 .auth-box {
   display: grid;
   gap: 0.8rem;
+}
+
+.admin-page {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(14, 44, 56, 0.12);
+  border-radius: 12px;
+  background: rgba(221, 244, 250, 0.35);
+}
+
+.admin-page h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.admin-page p {
+  margin: 0;
+}
+
+.admin-page .button-row {
+  margin-top: 0.4rem;
 }
 
 .calendar-panel {

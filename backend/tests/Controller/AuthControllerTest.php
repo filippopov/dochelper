@@ -39,6 +39,18 @@ class AuthControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testAdminRegistrationIsForbidden(): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/api/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'email' => 'admin-test@example.com',
+            'password' => 'secret123',
+            'roleType' => 'admin',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testRefreshRequiresRefreshToken(): void
     {
         $client = static::createClient();

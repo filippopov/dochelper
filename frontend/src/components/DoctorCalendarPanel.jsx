@@ -7,6 +7,10 @@ function DoctorCalendarPanel({
   calendarLoading,
   calendarData,
   calendarError,
+  title = 'Doctor Calendar',
+  description = 'Select a doctor to view available and booked consultation slots.',
+  readOnly = false,
+  showDoctorSelector = true,
 }) {
   const hasDoctors = doctors.length > 0;
 
@@ -26,27 +30,29 @@ function DoctorCalendarPanel({
 
   return (
     <section className="calendar-panel" aria-live="polite">
-      <h2>Doctor Calendar</h2>
-      <p className="helper-text">Select a doctor to view available and booked consultation slots.</p>
+      <h2>{title}</h2>
+      <p className="helper-text">{description}</p>
 
-      <div className="calendar-controls">
-        <label htmlFor="doctor-select">Doctor</label>
-        <select
-          id="doctor-select"
-          value={selectedDoctorId}
-          onChange={(event) => onDoctorChange(event.target.value)}
-          disabled={doctorsLoading || !hasDoctors}
-        >
-          <option value="">{doctorsLoading ? 'Loading doctors...' : 'Choose a doctor'}</option>
-          {doctors.map((doctor) => (
-            <option key={doctor.id} value={doctor.id}>
-              {doctor.email}
-            </option>
-          ))}
-        </select>
-      </div>
+      {showDoctorSelector ? (
+        <div className="calendar-controls">
+          <label htmlFor="doctor-select">Doctor</label>
+          <select
+            id="doctor-select"
+            value={selectedDoctorId}
+            onChange={(event) => onDoctorChange(event.target.value)}
+            disabled={doctorsLoading || !hasDoctors}
+          >
+            <option value="">{doctorsLoading ? 'Loading doctors...' : 'Choose a doctor'}</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.id} value={doctor.id}>
+                {doctor.email}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
-      {!hasDoctors && !doctorsLoading ? (
+      {!hasDoctors && !doctorsLoading && showDoctorSelector ? (
         <p className="status-error">No doctors are currently available.</p>
       ) : null}
 
@@ -65,7 +71,7 @@ function DoctorCalendarPanel({
                 <ul className="slot-list">
                   {day.slots.map((slot) => (
                     <li key={slot.startAt}>
-                      {slot.status === 'available' ? (
+                      {slot.status === 'available' && !readOnly ? (
                         <button
                           type="button"
                           className="slot-chip slot-action"
@@ -74,7 +80,7 @@ function DoctorCalendarPanel({
                           {`${formatTime(slot.startAt)} - ${formatTime(slot.endAt)}`}
                         </button>
                       ) : (
-                        <span className="slot-chip slot-booked">
+                        <span className={slot.status === 'booked' ? 'slot-chip slot-booked' : 'slot-chip'}>
                           {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
                         </span>
                       )}
