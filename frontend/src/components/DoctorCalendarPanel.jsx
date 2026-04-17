@@ -32,6 +32,28 @@ function DoctorCalendarPanel({
     }).format(new Date(dateValue));
   }
 
+  function getBookedSlotClass(slot) {
+    const status = typeof slot?.appointment?.status === 'string' ? slot.appointment.status.toLowerCase() : '';
+
+    if (status === 'pending') {
+      return 'slot-chip slot-booked slot-booked-pending';
+    }
+
+    if (status === 'confirmed') {
+      return 'slot-chip slot-booked slot-booked-confirmed';
+    }
+
+    if (status === 'completed') {
+      return 'slot-chip slot-booked slot-booked-completed';
+    }
+
+    if (status === 'cancelled') {
+      return 'slot-chip slot-booked slot-booked-cancelled';
+    }
+
+    return 'slot-chip slot-booked';
+  }
+
   return (
     <section className="calendar-panel" aria-live="polite">
       <h2>{title}</h2>
@@ -93,13 +115,13 @@ function DoctorCalendarPanel({
                       ) : allowDayManagement ? (
                         <button
                           type="button"
-                          className={slot.status === 'booked' ? 'slot-chip slot-booked slot-action' : 'slot-chip slot-action'}
+                          className={slot.status === 'booked' ? `${getBookedSlotClass(slot)} slot-action` : 'slot-chip slot-action'}
                           onClick={() => onReadOnlySlotSelect?.(day, slot)}
                         >
                           {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
                         </button>
                       ) : (
-                        <span className={slot.status === 'booked' ? 'slot-chip slot-booked' : 'slot-chip'}>
+                        <span className={slot.status === 'booked' ? getBookedSlotClass(slot) : 'slot-chip'}>
                           {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
                         </span>
                       )}
