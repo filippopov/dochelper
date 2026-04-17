@@ -333,6 +333,81 @@ button:focus-visible,
   margin-top: 0.4rem;
 }
 
+.admin-users-section {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(14, 44, 56, 0.12);
+}
+
+.admin-users-section h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.admin-users-search-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(14, 44, 56, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  text-align: left;
+  padding: 0.58rem 0.7rem;
+  border-bottom: 1px solid rgba(14, 44, 56, 0.08);
+}
+
+.admin-users-table th {
+  background: rgba(221, 244, 250, 0.55);
+  color: var(--ink-700);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.admin-users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-users-empty {
+  text-align: center;
+  color: var(--ink-500);
+  font-size: 0.9rem;
+}
+
+.admin-user-role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  border: 1px solid rgba(12, 122, 149, 0.26);
+  background: rgba(221, 244, 250, 0.82);
+  color: var(--primary-strong);
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.79rem;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.user-role-modal {
+  width: min(500px, 100%);
+}
+
 .calendar-panel {
   display: grid;
   gap: 0.8rem;

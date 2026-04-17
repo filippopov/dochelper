@@ -50,4 +50,28 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * @return list<User>
+     */
+    public function searchForAdmin(string $query = ''): array
+    {
+        $qb = $this->createQueryBuilder('u');
+
+        $normalizedQuery = trim($query);
+
+        if ($normalizedQuery !== '') {
+            $searchTerm = '%' . mb_strtolower($normalizedQuery) . '%';
+
+            $qb
+                ->andWhere('LOWER(u.email) LIKE :search OR LOWER(u.firstName) LIKE :search OR LOWER(u.lastName) LIKE :search')
+                ->setParameter('search', $searchTerm);
+        }
+
+        return $qb
+            ->orderBy('u.createdAt', 'DESC')
+            ->addOrderBy('u.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -5,6 +5,7 @@ import {
   createDoctorAvailabilityInterval,
   createAppointment,
   deleteDoctorAvailabilityInterval,
+  getAdminUsers,
   getDoctorAvailabilityDay,
   getDoctorCalendar,
   getDoctors,
@@ -12,6 +13,7 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  updateAdminUserRole,
   updateProfile,
   updateAppointmentStatus,
   updateDoctorAvailabilityInterval,
@@ -23,6 +25,7 @@ import BookingAppointmentModal from './components/BookingAppointmentModal';
 import DoctorCalendarPanel from './components/DoctorCalendarPanel';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
+import UserRoleModal from './components/UserRoleModal';
 
 const TOKEN_KEY = 'dochelper_jwt';
 
@@ -54,6 +57,15 @@ function App() {
   const [adminDoctorsLoading, setAdminDoctorsLoading] = useState(false);
   const [adminCalendarLoading, setAdminCalendarLoading] = useState(false);
   const [adminCalendarReloadToken, setAdminCalendarReloadToken] = useState(0);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminUsersSearch, setAdminUsersSearch] = useState('');
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState('');
+  const [adminUsersReloadToken, setAdminUsersReloadToken] = useState(0);
+  const [userRoleModalOpen, setUserRoleModalOpen] = useState(false);
+  const [userRoleModalUser, setUserRoleModalUser] = useState(null);
+  const [userRoleModalSubmitting, setUserRoleModalSubmitting] = useState(false);
+  const [userRoleModalError, setUserRoleModalError] = useState('');
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [availabilitySelectedDate, setAvailabilitySelectedDate] = useState('');
   const [availabilitySelectedSlot, setAvailabilitySelectedSlot] = useState(null);
@@ -367,6 +379,53 @@ function App() {
   }, [authBootstrapLoading, canAccessAdmin, isAdminUser, isAuthenticated, isDoctorUser, profile]);
 
   useEffect(() => {
+    if (!isAuthenticated || !isAdminUser || authBootstrapLoading || profile === null) {
+      setAdminUsers([]);
+      setAdminUsersError('');
+      setAdminUsersLoading(false);
+      setAdminUsersSearch('');
+      setUserRoleModalOpen(false);
+      setUserRoleModalUser(null);
+      setUserRoleModalSubmitting(false);
+      setUserRoleModalError('');
+
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadAdminUsers() {
+      setAdminUsersLoading(true);
+      setAdminUsersError('');
+
+      try {
+        const response = await getAdminUsers(adminUsersSearch.trim());
+
+        if (ignore) {
+          return;
+        }
+
+        setAdminUsers(Array.isArray(response.items) ? response.items : []);
+      } catch (requestError) {
+        if (!ignore) {
+          setAdminUsers([]);
+          setAdminUsersError(requestError.message);
+        }
+      } finally {
+        if (!ignore) {
+          setAdminUsersLoading(false);
+        }
+      }
+    }
+
+    loadAdminUsers();
+
+    return () => {
+      ignore = true;
+    };
+  }, [adminUsersReloadToken, adminUsersSearch, authBootstrapLoading, isAdminUser, isAuthenticated, profile]);
+
+  useEffect(() => {
     if (!isAuthenticated || !canAccessAdmin || selectedAdminDoctorId === '') {
       return;
     }
@@ -486,6 +545,45 @@ function App() {
       setAppointmentActionError(requestError.message);
     } finally {
       setAppointmentActionSubmitting(false);
+    }
+  }
+
+  function openUserRoleModal(userItem) {
+    if (!userItem) {
+      return;
+    }
+
+    setUserRoleModalUser(userItem);
+    setUserRoleModalError('');
+    setUserRoleModalOpen(true);
+  }
+
+  function closeUserRoleModal(force = false) {
+    if (userRoleModalSubmitting && !force) {
+      return;
+    }
+
+    setUserRoleModalOpen(false);
+    setUserRoleModalUser(null);
+    setUserRoleModalSubmitting(false);
+    setUserRoleModalError('');
+  }
+
+  async function handleSaveUserRole(userId, roleType) {
+    setUserRoleModalError('');
+    setUserRoleModalSubmitting(true);
+
+    try {
+      await updateAdminUserRole(userId, roleType);
+      const refreshedProfile = await getProfile();
+      setProfile(refreshedProfile);
+      setStatus('User role updated successfully.');
+      setAdminUsersReloadToken((current) => current + 1);
+      closeUserRoleModal(true);
+    } catch (requestError) {
+      setUserRoleModalError(requestError.message);
+    } finally {
+      setUserRoleModalSubmitting(false);
     }
   }
 
@@ -717,6 +815,14 @@ function App() {
     setSelectedAdminDoctorId('');
     setAdminCalendarData(null);
     setAdminCalendarError('');
+    setAdminUsers([]);
+    setAdminUsersSearch('');
+    setAdminUsersLoading(false);
+    setAdminUsersError('');
+    setUserRoleModalOpen(false);
+    setUserRoleModalUser(null);
+    setUserRoleModalSubmitting(false);
+    setUserRoleModalError('');
     setAppointmentModalOpen(false);
     setSelectedAppointmentSlot(null);
     setAppointmentActionError('');
@@ -1049,6 +1155,12 @@ function App() {
                     calendarLoading={adminCalendarLoading}
                     calendarData={adminCalendarData}
                     calendarError={adminCalendarError}
+                    adminUsers={adminUsers}
+                    adminUsersSearch={adminUsersSearch}
+                    adminUsersLoading={adminUsersLoading}
+                    adminUsersError={adminUsersError}
+                    onAdminUsersSearchChange={setAdminUsersSearch}
+                    onEditUserRole={openUserRoleModal}
                     onBackToApp={() => navigate('/app')}
                   />
                   {status ? <p className="status-ok">{status}</p> : null}
@@ -1104,6 +1216,15 @@ function App() {
         onApprove={handleApproveAppointment}
         onCancelAppointment={handleCancelAppointment}
         onClose={closeAppointmentActionModal}
+      />
+
+      <UserRoleModal
+        open={userRoleModalOpen}
+        user={userRoleModalUser}
+        isSubmitting={userRoleModalSubmitting}
+        error={userRoleModalError}
+        onSave={handleSaveUserRole}
+        onClose={closeUserRoleModal}
       />
     </div>
   );

@@ -85,6 +85,22 @@ export function getDoctors() {
   return request('/doctors', { token: getStoredAccessToken() });
 }
 
+export function getAdminUsers(search = '') {
+  const query = new URLSearchParams({ q: search });
+
+  return request(`/admin/users?${query.toString()}`, {
+    token: getStoredAccessToken(),
+  });
+}
+
+export function updateAdminUserRole(userId, roleType) {
+  return request(`/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    token: getStoredAccessToken(),
+    body: { roleType },
+  });
+}
+
 export function getDoctorCalendar(doctorId, { startDate, endDate }) {
   const query = new URLSearchParams({ startDate, endDate });
 
