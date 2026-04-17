@@ -538,16 +538,6 @@ button:focus-visible,
   gap: 0.75rem;
 }
 
-.json-preview {
-  margin: 0;
-  background: #0d1b22;
-  color: #d9f6ff;
-  border-radius: 12px;
-  padding: 0.95rem;
-  overflow: auto;
-  max-height: 290px;
-}
-
 .status-ok,
 .status-error {
   margin-top: 1rem;

@@ -810,7 +810,6 @@ function App() {
                       calendarError={calendarError}
                     />
 
-                    {profile ? <pre className="json-preview">{JSON.stringify(profile, null, 2)}</pre> : null}
                   </div>
 
                   {status ? <p className="status-ok">{status}</p> : null}
