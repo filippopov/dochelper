@@ -12,6 +12,7 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  updateProfile,
   updateAppointmentStatus,
   updateDoctorAvailabilityInterval,
 } from './api/auth';
@@ -35,6 +36,8 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('login');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -69,6 +72,12 @@ function App() {
   const [bookingDuration, setBookingDuration] = useState('30');
   const [bookingError, setBookingError] = useState('');
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [profileFirstName, setProfileFirstName] = useState('');
+  const [profileLastName, setProfileLastName] = useState('');
+  const [profileCurrentPassword, setProfileCurrentPassword] = useState('');
+  const [profileNewPassword, setProfileNewPassword] = useState('');
+  const [profileConfirmPassword, setProfileConfirmPassword] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
   const [calendarReloadToken, setCalendarReloadToken] = useState(0);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
@@ -172,6 +181,18 @@ function App() {
       navigate('/app', { replace: true });
     }
   }, [authBootstrapLoading, canAccessAdmin, isAuthenticated, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (profile === null) {
+      setProfileFirstName('');
+      setProfileLastName('');
+
+      return;
+    }
+
+    setProfileFirstName(profile.firstName ?? '');
+    setProfileLastName(profile.lastName ?? '');
+  }, [profile]);
 
   useEffect(() => {
     if (!isAuthenticated || authBootstrapLoading || profile === null) {
@@ -622,10 +643,12 @@ function App() {
     setStatus('');
 
     try {
-      const user = await registerUser({ email, password });
+      const user = await registerUser({ email, password, firstName, lastName });
       setStatus(`Account created for ${user.email}. You can log in now.`);
       setActiveTab('login');
       navigate('/auth', { replace: true });
+      setFirstName('');
+      setLastName('');
       setPassword('');
     } catch (requestError) {
       setError(requestError.message);
@@ -679,6 +702,12 @@ function App() {
     await logoutUser();
     setToken(null);
     setProfile(null);
+    setProfileFirstName('');
+    setProfileLastName('');
+    setProfileCurrentPassword('');
+    setProfileNewPassword('');
+    setProfileConfirmPassword('');
+    setProfileSaving(false);
     setActiveTab('login');
     setDoctors([]);
     setSelectedDoctorId('');
@@ -697,6 +726,67 @@ function App() {
     setBookingError('');
     setStatus('Logged out.');
     navigate('/auth', { replace: true });
+  }
+
+  async function handleProfileSubmit(event) {
+    event.preventDefault();
+    setError('');
+    setStatus('');
+
+    const normalizedFirstName = profileFirstName.trim();
+    const normalizedLastName = profileLastName.trim();
+    const wantsPasswordUpdate = profileCurrentPassword !== '' || profileNewPassword !== '' || profileConfirmPassword !== '';
+
+    if (normalizedFirstName.length < 2 || normalizedLastName.length < 2) {
+      setError('First name and last name must be at least 2 characters long.');
+
+      return;
+    }
+
+    if (wantsPasswordUpdate) {
+      if (profileCurrentPassword === '' || profileNewPassword === '') {
+        setError('To change password, provide both current and new password.');
+
+        return;
+      }
+
+      if (profileNewPassword.length < 8) {
+        setError('New password must be at least 8 characters long.');
+
+        return;
+      }
+
+      if (profileNewPassword !== profileConfirmPassword) {
+        setError('New password and confirmation do not match.');
+
+        return;
+      }
+    }
+
+    const payload = {
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+    };
+
+    if (wantsPasswordUpdate) {
+      payload.currentPassword = profileCurrentPassword;
+      payload.newPassword = profileNewPassword;
+    }
+
+    setProfileSaving(true);
+
+    try {
+      const updatedProfile = await updateProfile(payload);
+      setProfile(updatedProfile);
+      setProfileCurrentPassword('');
+      setProfileNewPassword('');
+      setProfileConfirmPassword('');
+      setStatus('Profile updated successfully.');
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setProfileSaving(false);
+    }
   }
 
   function handleSelectAuthTab(tab) {
@@ -761,6 +851,32 @@ function App() {
                   />
 
                   {activeTab === 'register' ? (
+                    <>
+                      <label htmlFor="first-name">First name</label>
+                      <input
+                        id="first-name"
+                        type="text"
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
+                        required
+                        minLength={2}
+                        maxLength={80}
+                      />
+
+                      <label htmlFor="last-name">Last name</label>
+                      <input
+                        id="last-name"
+                        type="text"
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
+                        required
+                        minLength={2}
+                        maxLength={80}
+                      />
+                    </>
+                  ) : null}
+
+                  {activeTab === 'register' ? (
                     <p className="helper-text">Public registration currently creates patient accounts.</p>
                   ) : null}
 
@@ -811,6 +927,93 @@ function App() {
                     />
 
                   </div>
+
+                  {status ? <p className="status-ok">{status}</p> : null}
+                  {error ? <p className="status-error">{error}</p> : null}
+                </section>
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              isAuthenticated ? (
+                <section className="card profile-page">
+                  <p className="eyebrow">Dochelper Profile</p>
+                  <h1>Profile Settings</h1>
+                  <p className="helper-text">Update your name and optionally change your password.</p>
+
+                  <form className="auth-form" onSubmit={handleProfileSubmit}>
+                    <label htmlFor="profile-email">Email</label>
+                    <input id="profile-email" type="email" value={profile?.email ?? ''} disabled readOnly />
+
+                    <label htmlFor="profile-first-name">First name</label>
+                    <input
+                      id="profile-first-name"
+                      type="text"
+                      value={profileFirstName}
+                      onChange={(event) => setProfileFirstName(event.target.value)}
+                      required
+                      minLength={2}
+                      maxLength={80}
+                      disabled={profileSaving}
+                    />
+
+                    <label htmlFor="profile-last-name">Last name</label>
+                    <input
+                      id="profile-last-name"
+                      type="text"
+                      value={profileLastName}
+                      onChange={(event) => setProfileLastName(event.target.value)}
+                      required
+                      minLength={2}
+                      maxLength={80}
+                      disabled={profileSaving}
+                    />
+
+                    <p className="helper-text">Fill in password fields only if you want to change your password.</p>
+
+                    <label htmlFor="profile-current-password">Current password</label>
+                    <input
+                      id="profile-current-password"
+                      type="password"
+                      value={profileCurrentPassword}
+                      onChange={(event) => setProfileCurrentPassword(event.target.value)}
+                      minLength={8}
+                      disabled={profileSaving}
+                    />
+
+                    <label htmlFor="profile-new-password">New password</label>
+                    <input
+                      id="profile-new-password"
+                      type="password"
+                      value={profileNewPassword}
+                      onChange={(event) => setProfileNewPassword(event.target.value)}
+                      minLength={8}
+                      disabled={profileSaving}
+                    />
+
+                    <label htmlFor="profile-confirm-password">Confirm new password</label>
+                    <input
+                      id="profile-confirm-password"
+                      type="password"
+                      value={profileConfirmPassword}
+                      onChange={(event) => setProfileConfirmPassword(event.target.value)}
+                      minLength={8}
+                      disabled={profileSaving}
+                    />
+
+                    <div className="button-row">
+                      <button type="submit" className="primary-button" disabled={profileSaving}>
+                        {profileSaving ? 'Saving...' : 'Save profile'}
+                      </button>
+                      <button type="button" className="secondary-button" onClick={() => navigate('/app')} disabled={profileSaving}>
+                        Back to app
+                      </button>
+                    </div>
+                  </form>
 
                   {status ? <p className="status-ok">{status}</p> : null}
                   {error ? <p className="status-error">{error}</p> : null}

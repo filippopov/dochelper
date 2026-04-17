@@ -73,6 +73,14 @@ export function getProfile() {
   return request('/me', { token: getStoredAccessToken() });
 }
 
+export function updateProfile(payload) {
+  return request('/me', {
+    method: 'PATCH',
+    token: getStoredAccessToken(),
+    body: payload,
+  });
+}
+
 export function getDoctors() {
   return request('/doctors', { token: getStoredAccessToken() });
 }

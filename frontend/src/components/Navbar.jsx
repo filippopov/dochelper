@@ -50,6 +50,16 @@ function Navbar({ isAuthenticated, profileEmail, canAccessAdmin, activeTab, onSe
             </NavLink>
           ) : null}
 
+          {isAuthenticated ? (
+            <NavLink
+              to="/profile"
+              className={({ isActive }) => (isActive ? 'nav-pill nav-pill-active' : 'nav-pill')}
+              onClick={closeMenu}
+            >
+              Profile
+            </NavLink>
+          ) : null}
+
           {!isAuthenticated ? (
             <div className="nav-auth">
               <button

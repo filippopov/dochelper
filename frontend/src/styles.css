@@ -305,6 +305,10 @@ button:focus-visible,
   gap: 0.8rem;
 }
 
+.profile-page {
+  width: min(680px, 100%);
+}
+
 .admin-page {
   display: grid;
   gap: 0.45rem;

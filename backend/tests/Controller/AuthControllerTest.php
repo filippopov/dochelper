@@ -22,6 +22,8 @@ class AuthControllerTest extends WebTestCase
         $client->request('POST', '/api/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'email' => 'not-an-email',
             'password' => '123',
+            'firstName' => 'Test',
+            'lastName' => 'User',
         ], JSON_THROW_ON_ERROR));
 
         self::assertResponseStatusCodeSame(422);
@@ -33,6 +35,8 @@ class AuthControllerTest extends WebTestCase
         $client->request('POST', '/api/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'email' => 'doctor-test@example.com',
             'password' => 'secret123',
+            'firstName' => 'Doc',
+            'lastName' => 'Test',
             'roleType' => 'doctor',
         ], JSON_THROW_ON_ERROR));
 
@@ -45,6 +49,8 @@ class AuthControllerTest extends WebTestCase
         $client->request('POST', '/api/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'email' => 'admin-test@example.com',
             'password' => 'secret123',
+            'firstName' => 'Admin',
+            'lastName' => 'Test',
             'roleType' => 'admin',
         ], JSON_THROW_ON_ERROR));
 
