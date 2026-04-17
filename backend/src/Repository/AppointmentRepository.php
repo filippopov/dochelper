@@ -92,4 +92,27 @@ class AppointmentRepository extends ServiceEntityRepository
 
         return false;
     }
+
+    public function hasAppointmentForPatientDoctorOnDay(User $patient, User $doctor, \DateTimeImmutable $day): bool
+    {
+        $dayStart = $day->setTime(0, 0, 0);
+        $dayEnd = $dayStart->modify('+1 day');
+
+        $result = $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)')
+            ->andWhere('a.patient = :patient')
+            ->andWhere('a.doctor = :doctor')
+            ->andWhere('a.scheduledAt >= :dayStart')
+            ->andWhere('a.scheduledAt < :dayEnd')
+            ->andWhere('a.status != :cancelled')
+            ->setParameter('patient', $patient)
+            ->setParameter('doctor', $doctor)
+            ->setParameter('dayStart', $dayStart)
+            ->setParameter('dayEnd', $dayEnd)
+            ->setParameter('cancelled', Appointment::STATUS_CANCELLED)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $result > 0;
+    }
 }

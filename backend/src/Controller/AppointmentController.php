@@ -83,6 +83,13 @@ class AppointmentController extends AbstractController
         $durationMinutes = (int) ($payload['durationMinutes'] ?? 30);
         $scheduledEnd = $scheduledAt->modify('+' . $durationMinutes . ' minutes');
 
+        if ($appointmentRepository->hasAppointmentForPatientDoctorOnDay($patient, $doctor, $scheduledAt)) {
+            return $this->json([
+                'error' => 'You already have an appointment with this doctor for the selected day.',
+                'code' => 'APPOINTMENT_ALREADY_EXISTS_FOR_DAY',
+            ], JsonResponse::HTTP_CONFLICT);
+        }
+
         if ($appointmentRepository->hasDoctorConflict($doctor, $scheduledAt, $scheduledEnd)) {
             return $this->json([
                 'error' => 'Selected timeslot is no longer available.',

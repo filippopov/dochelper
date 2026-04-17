@@ -156,6 +156,44 @@ class AppointmentControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(422);
     }
 
+    public function testPatientCannotCreateSecondAppointmentSameDayWithDoctor(): void
+    {
+        $client = static::createClient();
+        $doctorEmail = 'doctor.same-day.' . uniqid('', true) . '@example.com';
+        $doctor = $this->createUser($doctorEmail, 'secret123', User::ROLE_TYPE_DOCTOR);
+        $patientEmail = 'patient.same-day.' . uniqid('', true) . '@example.com';
+        $this->createUser($patientEmail, 'secret123', User::ROLE_TYPE_PATIENT);
+
+        $token = $this->loginAndGetToken($client, $patientEmail, 'secret123');
+        $appointmentDay = new \DateTimeImmutable('+1 day');
+
+        $client->request('POST', '/api/appointments', server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'CONTENT_TYPE' => 'application/json',
+        ], content: json_encode([
+            'doctorId' => $doctor->getId(),
+            'scheduledAt' => $appointmentDay->setTime(10, 0)->format(DATE_ATOM),
+            'durationMinutes' => 30,
+            'reason' => 'Initial consultation',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(201);
+
+        $client->request('POST', '/api/appointments', server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'CONTENT_TYPE' => 'application/json',
+        ], content: json_encode([
+            'doctorId' => $doctor->getId(),
+            'scheduledAt' => $appointmentDay->setTime(14, 0)->format(DATE_ATOM),
+            'durationMinutes' => 30,
+            'reason' => 'Follow-up consultation',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(409);
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('APPOINTMENT_ALREADY_EXISTS_FOR_DAY', $payload['code']);
+    }
+
     private function createUser(string $email, string $plainPassword, string $roleType): User
     {
         $container = static::getContainer();
