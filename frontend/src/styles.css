@@ -361,10 +361,23 @@ button:focus-visible,
   padding: 0.7rem;
 }
 
+.day-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
 .day-card h3 {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.95rem;
   color: var(--ink-700);
+}
+
+.day-manage-button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 .slot-list {
@@ -447,6 +460,30 @@ button:focus-visible,
 .booking-form {
   display: grid;
   gap: 0.55rem;
+}
+
+.availability-modal {
+  width: min(620px, 100%);
+}
+
+.availability-intervals {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.availability-item {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.availability-item .slot-chip {
+  flex: 1;
+}
+
+.interval-active {
+  border-color: rgba(9, 95, 117, 0.42);
+  box-shadow: 0 0 0 2px rgba(12, 122, 149, 0.2);
 }
 
 .modal-actions {

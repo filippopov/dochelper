@@ -5,6 +5,8 @@ function AdminPage({
   doctors,
   selectedDoctorId,
   onDoctorChange,
+  onDaySelect,
+  onSlotSelect,
   doctorsLoading,
   calendarLoading,
   calendarData,
@@ -39,6 +41,8 @@ function AdminPage({
         doctors={doctors}
         selectedDoctorId={selectedDoctorId}
         onDoctorChange={onDoctorChange}
+        onDaySelect={onDaySelect}
+        onReadOnlySlotSelect={onSlotSelect}
         onSlotSelect={() => {}}
         doctorsLoading={doctorsLoading}
         calendarLoading={calendarLoading}
@@ -47,11 +51,12 @@ function AdminPage({
         title={isDoctorView ? 'Your Weekly Availability' : 'Selected Doctor Availability'}
         description={
           isDoctorView
-            ? 'This view is read-only. It shows your currently available and booked slots.'
-            : 'This view is read-only. Select a doctor to inspect their currently available and booked slots.'
+            ? 'Click a day or slot to manage date-specific availability overrides for that day.'
+            : 'Click a day or slot to manage date-specific availability overrides for the selected doctor.'
         }
         readOnly={true}
         showDoctorSelector={!isDoctorView}
+        allowDayManagement={true}
       />
 
       <div className="button-row">

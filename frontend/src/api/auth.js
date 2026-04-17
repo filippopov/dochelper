@@ -85,6 +85,44 @@ export function getDoctorCalendar(doctorId, { startDate, endDate }) {
   });
 }
 
+export function getDoctorAvailabilityDay(doctorId, { date }) {
+  const query = new URLSearchParams({ date });
+
+  return request(`/doctors/${doctorId}/availability?${query.toString()}`, {
+    token: getStoredAccessToken(),
+  });
+}
+
+export function createDoctorAvailabilityInterval(doctorId, { date, startTime, endTime }) {
+  return request(`/doctors/${doctorId}/availability`, {
+    method: 'POST',
+    token: getStoredAccessToken(),
+    body: {
+      date,
+      startTime,
+      endTime,
+    },
+  });
+}
+
+export function updateDoctorAvailabilityInterval(doctorId, availabilityId, { startTime, endTime }) {
+  return request(`/doctors/${doctorId}/availability/${availabilityId}`, {
+    method: 'PATCH',
+    token: getStoredAccessToken(),
+    body: {
+      startTime,
+      endTime,
+    },
+  });
+}
+
+export function deleteDoctorAvailabilityInterval(doctorId, availabilityId) {
+  return request(`/doctors/${doctorId}/availability/${availabilityId}`, {
+    method: 'DELETE',
+    token: getStoredAccessToken(),
+  });
+}
+
 export function createAppointment({ doctorId, scheduledAt, durationMinutes = 30, reason = 'Consultation' }) {
   return request('/appointments', {
     method: 'POST',

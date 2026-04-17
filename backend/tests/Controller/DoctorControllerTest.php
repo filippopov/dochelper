@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Entity\DoctorAvailability;
 use App\Entity\User;
+use App\Repository\DoctorAvailabilityRepository;
 use App\Repository\UserRepository;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -105,6 +107,99 @@ class DoctorControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(200);
     }
 
+    public function testDoctorCanCreateUpdateAndDeleteOwnAvailabilityInterval(): void
+    {
+        $client = static::createClient();
+        $doctorEmail = 'doctor.availability.' . uniqid('', true) . '@example.com';
+        $doctor = $this->createUser($doctorEmail, 'secret123', User::ROLE_TYPE_DOCTOR);
+
+        $token = $this->loginAndGetToken($client, $doctorEmail, 'secret123');
+
+        $client->request('POST', '/api/doctors/' . $doctor->getId() . '/availability', server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'CONTENT_TYPE' => 'application/json',
+        ], content: json_encode([
+            'date' => '2026-04-20',
+            'startTime' => '08:00',
+            'endTime' => '09:00',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(201);
+        $createPayload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('availability', $createPayload);
+        $availabilityId = (int) $createPayload['availability']['id'];
+
+        $client->request('PATCH', '/api/doctors/' . $doctor->getId() . '/availability/' . $availabilityId, server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'CONTENT_TYPE' => 'application/json',
+        ], content: json_encode([
+            'startTime' => '08:30',
+            'endTime' => '09:30',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(200);
+
+        $client->request('DELETE', '/api/doctors/' . $doctor->getId() . '/availability/' . $availabilityId, server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+        ]);
+
+        self::assertResponseStatusCodeSame(200);
+    }
+
+    public function testPatientCannotManageDoctorAvailability(): void
+    {
+        $client = static::createClient();
+        $doctor = $this->createUser('doctor.forbidden.' . uniqid('', true) . '@example.com', 'secret123', User::ROLE_TYPE_DOCTOR);
+        $patientEmail = 'patient.forbidden.' . uniqid('', true) . '@example.com';
+        $this->createUser($patientEmail, 'secret123', User::ROLE_TYPE_PATIENT);
+
+        $token = $this->loginAndGetToken($client, $patientEmail, 'secret123');
+        $client->request('POST', '/api/doctors/' . $doctor->getId() . '/availability', server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'CONTENT_TYPE' => 'application/json',
+        ], content: json_encode([
+            'date' => '2026-04-20',
+            'startTime' => '10:00',
+            'endTime' => '11:00',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testDateOverrideTakesPrecedenceOverWeeklyFallbackInCalendar(): void
+    {
+        $client = static::createClient();
+        $doctorEmail = 'doctor.override.' . uniqid('', true) . '@example.com';
+        $doctor = $this->createUser($doctorEmail, 'secret123', User::ROLE_TYPE_DOCTOR);
+        $this->createWeeklyAvailability($doctor, 1, '09:00:00', '10:00:00');
+
+        $token = $this->loginAndGetToken($client, $doctorEmail, 'secret123');
+        $date = '2026-04-20';
+
+        $client->request('POST', '/api/doctors/' . $doctor->getId() . '/availability', server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'CONTENT_TYPE' => 'application/json',
+        ], content: json_encode([
+            'date' => $date,
+            'startTime' => '08:00',
+            'endTime' => '09:00',
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(201);
+
+        $client->request('GET', '/api/doctors/' . $doctor->getId() . '/calendar?startDate=' . $date . '&endDate=' . $date, server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+        ]);
+
+        self::assertResponseStatusCodeSame(200);
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $slots = $payload['days'][0]['slots'] ?? [];
+
+        self::assertCount(2, $slots);
+        self::assertSame('08:00', substr((string) $slots[0]['startAt'], 11, 5));
+        self::assertSame('08:30', substr((string) $slots[1]['startAt'], 11, 5));
+    }
+
     private function createUser(string $email, string $plainPassword, string $roleType): User
     {
         $container = static::getContainer();
@@ -137,5 +232,20 @@ class DoctorControllerTest extends WebTestCase
         self::assertArrayHasKey('token', $payload);
 
         return (string) $payload['token'];
+    }
+
+    private function createWeeklyAvailability(User $doctor, int $dayOfWeek, string $startTime, string $endTime): void
+    {
+        $container = static::getContainer();
+        /** @var DoctorAvailabilityRepository $availabilityRepository */
+        $availabilityRepository = $container->get(DoctorAvailabilityRepository::class);
+
+        $availability = (new DoctorAvailability())
+            ->setDoctor($doctor)
+            ->setDayOfWeek($dayOfWeek)
+            ->setStartTime(new \DateTimeImmutable($startTime))
+            ->setEndTime(new \DateTimeImmutable($endTime));
+
+        $availabilityRepository->save($availability);
     }
 }

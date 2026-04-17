@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
+  createDoctorAvailabilityInterval,
   createAppointment,
+  deleteDoctorAvailabilityInterval,
+  getDoctorAvailabilityDay,
   getDoctorCalendar,
   getDoctors,
   getProfile,
   loginUser,
   logoutUser,
   registerUser,
+  updateDoctorAvailabilityInterval,
 } from './api/auth';
 import AdminPage from './components/AdminPage';
+import AvailabilityEditorModal from './components/AvailabilityEditorModal';
 import BookingAppointmentModal from './components/BookingAppointmentModal';
 import DoctorCalendarPanel from './components/DoctorCalendarPanel';
 import Footer from './components/Footer';
@@ -42,6 +47,15 @@ function App() {
   const [adminCalendarError, setAdminCalendarError] = useState('');
   const [adminDoctorsLoading, setAdminDoctorsLoading] = useState(false);
   const [adminCalendarLoading, setAdminCalendarLoading] = useState(false);
+  const [adminCalendarReloadToken, setAdminCalendarReloadToken] = useState(0);
+  const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [availabilitySelectedDate, setAvailabilitySelectedDate] = useState('');
+  const [availabilitySelectedSlot, setAvailabilitySelectedSlot] = useState(null);
+  const [availabilityIntervals, setAvailabilityIntervals] = useState([]);
+  const [availabilitySource, setAvailabilitySource] = useState('date_override');
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilitySubmitting, setAvailabilitySubmitting] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState('');
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [bookingReason, setBookingReason] = useState('Consultation');
@@ -363,7 +377,118 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [canAccessAdmin, isAuthenticated, selectedAdminDoctorId]);
+  }, [adminCalendarReloadToken, canAccessAdmin, isAuthenticated, selectedAdminDoctorId]);
+
+  async function openAvailabilityEditor(date, slot = null) {
+    if (!selectedAdminDoctorId || !date) {
+      return;
+    }
+
+    setAvailabilitySelectedDate(date);
+    setAvailabilitySelectedSlot(slot);
+    setAvailabilityIntervals([]);
+    setAvailabilitySource('date_override');
+    setAvailabilityError('');
+    setAvailabilityModalOpen(true);
+    setAvailabilityLoading(true);
+
+    try {
+      const response = await getDoctorAvailabilityDay(selectedAdminDoctorId, { date });
+      setAvailabilityIntervals(Array.isArray(response.intervals) ? response.intervals : []);
+      setAvailabilitySource(typeof response.source === 'string' ? response.source : 'date_override');
+    } catch (requestError) {
+      setAvailabilityError(requestError.message);
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  }
+
+  function closeAvailabilityEditor() {
+    if (availabilitySubmitting) {
+      return;
+    }
+
+    setAvailabilityModalOpen(false);
+    setAvailabilitySelectedDate('');
+    setAvailabilitySelectedSlot(null);
+    setAvailabilityError('');
+    setAvailabilityIntervals([]);
+    setAvailabilitySource('date_override');
+  }
+
+  async function refreshAvailabilityDay(date) {
+    if (!selectedAdminDoctorId || !date) {
+      return;
+    }
+
+    const response = await getDoctorAvailabilityDay(selectedAdminDoctorId, { date });
+    setAvailabilityIntervals(Array.isArray(response.intervals) ? response.intervals : []);
+    setAvailabilitySource(typeof response.source === 'string' ? response.source : 'date_override');
+  }
+
+  async function handleAvailabilityCreate({ startTime, endTime }) {
+    if (!selectedAdminDoctorId || !availabilitySelectedDate) {
+      return;
+    }
+
+    setAvailabilityError('');
+    setAvailabilitySubmitting(true);
+
+    try {
+      await createDoctorAvailabilityInterval(selectedAdminDoctorId, {
+        date: availabilitySelectedDate,
+        startTime,
+        endTime,
+      });
+      await refreshAvailabilityDay(availabilitySelectedDate);
+      setAdminCalendarReloadToken((current) => current + 1);
+    } catch (requestError) {
+      setAvailabilityError(requestError.message);
+    } finally {
+      setAvailabilitySubmitting(false);
+    }
+  }
+
+  async function handleAvailabilityUpdate(availabilityId, { startTime, endTime }) {
+    if (!selectedAdminDoctorId || !availabilitySelectedDate) {
+      return;
+    }
+
+    setAvailabilityError('');
+    setAvailabilitySubmitting(true);
+
+    try {
+      await updateDoctorAvailabilityInterval(selectedAdminDoctorId, availabilityId, {
+        startTime,
+        endTime,
+      });
+      await refreshAvailabilityDay(availabilitySelectedDate);
+      setAdminCalendarReloadToken((current) => current + 1);
+    } catch (requestError) {
+      setAvailabilityError(requestError.message);
+    } finally {
+      setAvailabilitySubmitting(false);
+    }
+  }
+
+  async function handleAvailabilityDelete(availabilityId) {
+    if (!selectedAdminDoctorId || !availabilitySelectedDate) {
+      return;
+    }
+
+    setAvailabilityError('');
+    setAvailabilitySubmitting(true);
+
+    try {
+      await deleteDoctorAvailabilityInterval(selectedAdminDoctorId, availabilityId);
+      await refreshAvailabilityDay(availabilitySelectedDate);
+      setAdminCalendarReloadToken((current) => current + 1);
+    } catch (requestError) {
+      setAvailabilityError(requestError.message);
+    } finally {
+      setAvailabilitySubmitting(false);
+    }
+  }
 
   function openBookingModal(slot) {
     if (!selectedDoctorId) {
@@ -411,6 +536,7 @@ function App() {
         `Appointment booked for ${new Intl.DateTimeFormat(undefined, {
           dateStyle: 'medium',
           timeStyle: 'short',
+          hour12: false,
           timeZone: 'UTC',
         }).format(new Date(selectedSlot.startAt))}.`
       );
@@ -512,6 +638,10 @@ function App() {
   const selectedDoctor = useMemo(
     () => doctors.find((doctor) => String(doctor.id) === String(selectedDoctorId)) ?? null,
     [doctors, selectedDoctorId]
+  );
+  const selectedAdminDoctor = useMemo(
+    () => adminDoctors.find((doctor) => String(doctor.id) === String(selectedAdminDoctorId)) ?? null,
+    [adminDoctors, selectedAdminDoctorId]
   );
 
   return (
@@ -634,6 +764,8 @@ function App() {
                     doctors={adminDoctors}
                     selectedDoctorId={selectedAdminDoctorId}
                     onDoctorChange={setSelectedAdminDoctorId}
+                    onDaySelect={(day) => openAvailabilityEditor(day.date)}
+                    onSlotSelect={(day, slot) => openAvailabilityEditor(day.date, slot)}
                     doctorsLoading={adminDoctorsLoading}
                     calendarLoading={adminCalendarLoading}
                     calendarData={adminCalendarData}
@@ -666,6 +798,22 @@ function App() {
         onDurationChange={setBookingDuration}
         onClose={closeBookingModal}
         onSubmit={handleBookingSubmit}
+      />
+
+      <AvailabilityEditorModal
+        open={availabilityModalOpen}
+        doctorEmail={selectedAdminDoctor?.email ?? profile?.email ?? 'Unknown doctor'}
+        selectedDate={availabilitySelectedDate}
+        selectedSlot={availabilitySelectedSlot}
+        intervals={availabilityIntervals}
+        source={availabilitySource}
+        loading={availabilityLoading}
+        submitting={availabilitySubmitting}
+        error={availabilityError}
+        onClose={closeAvailabilityEditor}
+        onCreate={handleAvailabilityCreate}
+        onUpdate={handleAvailabilityUpdate}
+        onDelete={handleAvailabilityDelete}
       />
     </div>
   );

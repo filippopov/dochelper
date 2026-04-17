@@ -28,6 +28,15 @@ class DoctorAvailabilityRepository extends ServiceEntityRepository
         }
     }
 
+    public function remove(DoctorAvailability $availability, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($availability);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
     /**
      * @return list<DoctorAvailability>
      */
@@ -40,5 +49,31 @@ class DoctorAvailabilityRepository extends ServiceEntityRepository
             ->addOrderBy('da.startTime', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @return list<DoctorAvailability>
+     */
+    public function findForDoctorAndDay(User $doctor, int $dayOfWeek): array
+    {
+        return $this->createQueryBuilder('da')
+            ->andWhere('da.doctor = :doctor')
+            ->andWhere('da.dayOfWeek = :dayOfWeek')
+            ->setParameter('doctor', $doctor)
+            ->setParameter('dayOfWeek', $dayOfWeek)
+            ->orderBy('da.startTime', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findOwnedByDoctor(User $doctor, int $availabilityId): ?DoctorAvailability
+    {
+        return $this->createQueryBuilder('da')
+            ->andWhere('da.id = :availabilityId')
+            ->andWhere('da.doctor = :doctor')
+            ->setParameter('availabilityId', $availabilityId)
+            ->setParameter('doctor', $doctor)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 }

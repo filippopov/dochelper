@@ -3,6 +3,8 @@ function DoctorCalendarPanel({
   selectedDoctorId,
   onDoctorChange,
   onSlotSelect,
+  onDaySelect,
+  onReadOnlySlotSelect,
   doctorsLoading,
   calendarLoading,
   calendarData,
@@ -11,6 +13,7 @@ function DoctorCalendarPanel({
   description = 'Select a doctor to view available and booked consultation slots.',
   readOnly = false,
   showDoctorSelector = true,
+  allowDayManagement = false,
 }) {
   const hasDoctors = doctors.length > 0;
 
@@ -24,6 +27,7 @@ function DoctorCalendarPanel({
     return new Intl.DateTimeFormat(undefined, {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
       timeZone: 'UTC',
     }).format(new Date(dateValue));
   }
@@ -63,7 +67,14 @@ function DoctorCalendarPanel({
         <div className="calendar-grid">
           {calendarData.days.map((day) => (
             <article className="day-card" key={day.date}>
-              <h3>{formatDay(day.date)}</h3>
+              <div className="day-card-header">
+                <h3>{formatDay(day.date)}</h3>
+                {allowDayManagement ? (
+                  <button type="button" className="secondary-button day-manage-button" onClick={() => onDaySelect?.(day)}>
+                    Manage
+                  </button>
+                ) : null}
+              </div>
 
               {day.slots.length === 0 ? (
                 <p className="helper-text">No slots configured</p>
@@ -78,6 +89,14 @@ function DoctorCalendarPanel({
                           onClick={() => onSlotSelect(slot)}
                         >
                           {`${formatTime(slot.startAt)} - ${formatTime(slot.endAt)}`}
+                        </button>
+                      ) : allowDayManagement ? (
+                        <button
+                          type="button"
+                          className={slot.status === 'booked' ? 'slot-chip slot-booked slot-action' : 'slot-chip slot-action'}
+                          onClick={() => onReadOnlySlotSelect?.(day, slot)}
+                        >
+                          {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
                         </button>
                       ) : (
                         <span className={slot.status === 'booked' ? 'slot-chip slot-booked' : 'slot-chip'}>
