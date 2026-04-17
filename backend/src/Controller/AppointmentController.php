@@ -127,16 +127,18 @@ class AppointmentController extends AbstractController
     }
 
     #[Route('/{id}/status', name: 'api_appointments_status', methods: ['PATCH'])]
-    #[IsGranted('ROLE_DOCTOR')]
+    #[IsGranted('ROLE_USER')]
     public function updateStatus(
         Appointment $appointment,
         Request $request,
         AppointmentRepository $appointmentRepository,
         ValidatorInterface $validator
     ): JsonResponse {
-        $doctor = $this->requireUser();
+        $actor = $this->requireUser();
+        $isAdmin = $actor->isAdmin();
+        $isDoctorOwner = $actor->isDoctor() && $appointment->getDoctor()->getId() === $actor->getId();
 
-        if ($appointment->getDoctor()->getId() !== $doctor->getId()) {
+        if (!$isAdmin && !$isDoctorOwner) {
             return $this->json([
                 'error' => 'Forbidden.',
                 'code' => 'FORBIDDEN',
@@ -149,10 +151,7 @@ class AppointmentController extends AbstractController
         }
 
         $violations = $validator->validate($payload, new Assert\Collection([
-            'status' => [new Assert\Required([new Assert\Choice([
-                Appointment::STATUS_CONFIRMED,
-                Appointment::STATUS_COMPLETED,
-            ])])],
+            'status' => [new Assert\Required([new Assert\Type('string')])],
         ]));
 
         if (count($violations) > 0) {
@@ -164,6 +163,23 @@ class AppointmentController extends AbstractController
         }
 
         $newStatus = (string) $payload['status'];
+        $allowedTargets = $isAdmin
+            ? [Appointment::STATUS_CONFIRMED]
+            : [Appointment::STATUS_CONFIRMED, Appointment::STATUS_COMPLETED];
+
+        if (!in_array($newStatus, $allowedTargets, true)) {
+            return $this->json([
+                'error' => 'Validation failed.',
+                'code' => 'VALIDATION_ERROR',
+                'details' => [
+                    [
+                        'field' => 'status',
+                        'message' => 'This value is not valid.',
+                    ],
+                ],
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $current = $appointment->getStatus();
         $allowed = [
             Appointment::STATUS_PENDING => [Appointment::STATUS_CONFIRMED],
@@ -184,12 +200,15 @@ class AppointmentController extends AbstractController
     }
 
     #[Route('/{id}/cancel', name: 'api_appointments_cancel', methods: ['POST'])]
-    #[IsGranted('ROLE_PATIENT')]
+    #[IsGranted('ROLE_USER')]
     public function cancel(Appointment $appointment, AppointmentRepository $appointmentRepository): JsonResponse
     {
-        $patient = $this->requireUser();
+        $actor = $this->requireUser();
+        $isAdmin = $actor->isAdmin();
+        $isDoctorOwner = $actor->isDoctor() && $appointment->getDoctor()->getId() === $actor->getId();
+        $isPatientOwner = $actor->isPatient() && $appointment->getPatient()->getId() === $actor->getId();
 
-        if ($appointment->getPatient()->getId() !== $patient->getId()) {
+        if (!$isAdmin && !$isDoctorOwner && !$isPatientOwner) {
             return $this->json([
                 'error' => 'Forbidden.',
                 'code' => 'FORBIDDEN',

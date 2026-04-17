@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
+  cancelAppointment,
   createDoctorAvailabilityInterval,
   createAppointment,
   deleteDoctorAvailabilityInterval,
@@ -11,9 +12,11 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  updateAppointmentStatus,
   updateDoctorAvailabilityInterval,
 } from './api/auth';
 import AdminPage from './components/AdminPage';
+import AppointmentActionModal from './components/AppointmentActionModal';
 import AvailabilityEditorModal from './components/AvailabilityEditorModal';
 import BookingAppointmentModal from './components/BookingAppointmentModal';
 import DoctorCalendarPanel from './components/DoctorCalendarPanel';
@@ -56,6 +59,10 @@ function App() {
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilitySubmitting, setAvailabilitySubmitting] = useState(false);
   const [availabilityError, setAvailabilityError] = useState('');
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+  const [selectedAppointmentSlot, setSelectedAppointmentSlot] = useState(null);
+  const [appointmentActionSubmitting, setAppointmentActionSubmitting] = useState(false);
+  const [appointmentActionError, setAppointmentActionError] = useState('');
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [bookingReason, setBookingReason] = useState('Consultation');
@@ -271,6 +278,10 @@ function App() {
       setAdminCalendarData(null);
       setAdminCalendarError('');
       setAdminDoctorsLoading(false);
+      setAppointmentModalOpen(false);
+      setSelectedAppointmentSlot(null);
+      setAppointmentActionError('');
+      setAppointmentActionSubmitting(false);
 
       return;
     }
@@ -400,6 +411,60 @@ function App() {
       setAvailabilityError(requestError.message);
     } finally {
       setAvailabilityLoading(false);
+    }
+  }
+
+  function openAppointmentActionModal(slot) {
+    if (!slot?.appointment) {
+      return;
+    }
+
+    setSelectedAppointmentSlot(slot);
+    setAppointmentActionError('');
+    setAppointmentModalOpen(true);
+  }
+
+  function closeAppointmentActionModal(force = false) {
+    if (appointmentActionSubmitting && !force) {
+      return;
+    }
+
+    setAppointmentModalOpen(false);
+    setSelectedAppointmentSlot(null);
+    setAppointmentActionError('');
+  }
+
+  async function handleApproveAppointment(appointmentId) {
+    setAppointmentActionError('');
+    setAppointmentActionSubmitting(true);
+
+    try {
+      await updateAppointmentStatus(appointmentId, 'confirmed');
+      setStatus('Appointment approved.');
+      setAdminCalendarReloadToken((current) => current + 1);
+      setCalendarReloadToken((current) => current + 1);
+      closeAppointmentActionModal(true);
+    } catch (requestError) {
+      setAppointmentActionError(requestError.message);
+    } finally {
+      setAppointmentActionSubmitting(false);
+    }
+  }
+
+  async function handleCancelAppointment(appointmentId) {
+    setAppointmentActionError('');
+    setAppointmentActionSubmitting(true);
+
+    try {
+      await cancelAppointment(appointmentId);
+      setStatus('Appointment cancelled.');
+      setAdminCalendarReloadToken((current) => current + 1);
+      setCalendarReloadToken((current) => current + 1);
+      closeAppointmentActionModal(true);
+    } catch (requestError) {
+      setAppointmentActionError(requestError.message);
+    } finally {
+      setAppointmentActionSubmitting(false);
     }
   }
 
@@ -623,6 +688,10 @@ function App() {
     setSelectedAdminDoctorId('');
     setAdminCalendarData(null);
     setAdminCalendarError('');
+    setAppointmentModalOpen(false);
+    setSelectedAppointmentSlot(null);
+    setAppointmentActionError('');
+    setAppointmentActionSubmitting(false);
     setBookingModalOpen(false);
     setSelectedSlot(null);
     setBookingError('');
@@ -765,7 +834,15 @@ function App() {
                     selectedDoctorId={selectedAdminDoctorId}
                     onDoctorChange={setSelectedAdminDoctorId}
                     onDaySelect={(day) => openAvailabilityEditor(day.date)}
-                    onSlotSelect={(day, slot) => openAvailabilityEditor(day.date, slot)}
+                    onSlotSelect={(day, slot) => {
+                      if (slot?.appointment) {
+                        openAppointmentActionModal(slot);
+
+                        return;
+                      }
+
+                      openAvailabilityEditor(day.date, slot);
+                    }}
                     doctorsLoading={adminDoctorsLoading}
                     calendarLoading={adminCalendarLoading}
                     calendarData={adminCalendarData}
@@ -814,6 +891,17 @@ function App() {
         onCreate={handleAvailabilityCreate}
         onUpdate={handleAvailabilityUpdate}
         onDelete={handleAvailabilityDelete}
+      />
+
+      <AppointmentActionModal
+        open={appointmentModalOpen}
+        slot={selectedAppointmentSlot}
+        doctorEmail={selectedAdminDoctor?.email ?? profile?.email ?? 'Unknown doctor'}
+        isSubmitting={appointmentActionSubmitting}
+        error={appointmentActionError}
+        onApprove={handleApproveAppointment}
+        onCancelAppointment={handleCancelAppointment}
+        onClose={closeAppointmentActionModal}
       />
     </div>
   );

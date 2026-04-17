@@ -136,6 +136,21 @@ export function createAppointment({ doctorId, scheduledAt, durationMinutes = 30,
   });
 }
 
+export function updateAppointmentStatus(appointmentId, status) {
+  return request(`/appointments/${appointmentId}/status`, {
+    method: 'PATCH',
+    token: getStoredAccessToken(),
+    body: { status },
+  });
+}
+
+export function cancelAppointment(appointmentId) {
+  return request(`/appointments/${appointmentId}/cancel`, {
+    method: 'POST',
+    token: getStoredAccessToken(),
+  });
+}
+
 export async function logoutUser() {
   const refreshToken = getStoredRefreshToken();
 
